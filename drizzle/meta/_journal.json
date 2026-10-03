@@ -15,6 +15,13 @@
       "when": 1791057928843,
       "tag": "0001_abuse_protection",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791059118181,
+      "tag": "0002_confirmation_sent",
+      "breakpoints": true
     }
   ]
 }

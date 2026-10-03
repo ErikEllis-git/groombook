@@ -101,6 +101,11 @@ test("request → confirm → complete", async ({ page }) => {
     upcoming.getByRole("link", { name: "Text confirmation" }),
   ).toHaveAttribute("href", /^sms:4345550142\?&body=.*confirmed/);
 
+  // Kevin texts the customer, then ticks it off.
+  await expect(upcoming).toContainText("Customer not texted yet");
+  await upcoming.getByRole("button", { name: "Mark text sent" }).click();
+  await expect(upcoming).toContainText("Confirmation texted");
+
   // Mark it done.
   await upcoming.getByRole("button", { name: "Mark completed" }).click();
   await expect(upcoming).toBeHidden();

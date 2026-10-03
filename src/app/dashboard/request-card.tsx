@@ -9,7 +9,11 @@ import {
   mapsLink,
   smsLink,
 } from "@/lib/format";
-import { changeStatusAction, saveNotesAction } from "./actions";
+import {
+  changeStatusAction,
+  markTextSentAction,
+  saveNotesAction,
+} from "./actions";
 import { ConfirmForm } from "./confirm-form";
 
 const button =
@@ -155,17 +159,37 @@ function Actions({ req, today }: { req: AppointmentRequest; today: string }) {
       );
     case "confirmed":
       return (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-4">
-          <form action={changeStatusAction.bind(null, req.id, "confirmed", "completed")}>
-            <SubmitButton className={primary} pendingText="Saving…">
-              Mark completed
-            </SubmitButton>
-          </form>
-          <form action={changeStatusAction.bind(null, req.id, "confirmed", "declined")}>
-            <SubmitButton className={danger} pendingText="Cancelling…">
-              Cancel booking
-            </SubmitButton>
-          </form>
+        <div className="mt-4 border-t border-stone-100 pt-4">
+          {req.confirmationSentAt ? (
+            <p className="mb-3 text-sm font-medium text-teal-800">
+              ✓ Confirmation texted{" "}
+              {formatTimestamp(req.confirmationSentAt, business.timeZone)}
+            </p>
+          ) : (
+            <form
+              action={markTextSentAction.bind(null, req.id)}
+              className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-200"
+            >
+              <span className="text-sm font-medium text-amber-900">
+                Customer not texted yet
+              </span>
+              <SubmitButton className={secondary} pendingText="Saving…">
+                Mark text sent
+              </SubmitButton>
+            </form>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <form action={changeStatusAction.bind(null, req.id, "confirmed", "completed")}>
+              <SubmitButton className={primary} pendingText="Saving…">
+                Mark completed
+              </SubmitButton>
+            </form>
+            <form action={changeStatusAction.bind(null, req.id, "confirmed", "declined")}>
+              <SubmitButton className={danger} pendingText="Cancelling…">
+                Cancel booking
+              </SubmitButton>
+            </form>
+          </div>
         </div>
       );
     case "declined":

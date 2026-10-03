@@ -5,6 +5,7 @@ import { z } from "zod";
 import { business } from "@/config";
 import {
   confirmRequest,
+  markConfirmationSent,
   transitionRequest,
   updateInternalNotes,
 } from "@/db/queries";
@@ -77,6 +78,13 @@ export async function changeStatusAction(
   if (!ALLOWED_TRANSITIONS[from]?.includes(to)) return;
 
   await transitionRequest(id, from, to);
+  revalidatePath("/dashboard");
+}
+
+export async function markTextSentAction(id: string) {
+  await requireOwner();
+  if (!idSchema.safeParse(id).success) return;
+  await markConfirmationSent(id);
   revalidatePath("/dashboard");
 }
 

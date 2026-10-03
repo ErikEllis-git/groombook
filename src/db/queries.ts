@@ -134,11 +134,34 @@ export async function transitionRequest(
     // Back to New means the old appointment slot no longer applies.
     .set(
       to === "new"
-        ? { status: to, confirmedDate: null, confirmedTime: null }
+        ? {
+            status: to,
+            confirmedDate: null,
+            confirmedTime: null,
+            confirmationSentAt: null,
+          }
         : { status: to },
     )
     .where(
       and(eq(appointmentRequests.id, id), eq(appointmentRequests.status, from)),
+    )
+    .returning({ id: appointmentRequests.id });
+  return rows.length > 0;
+}
+
+/**
+ * Records that Kevin texted the customer their confirmation. The app can't see
+ * his messages, so this is his own checkmark. Only applies to live bookings.
+ */
+export async function markConfirmationSent(id: string): Promise<boolean> {
+  const rows = await db
+    .update(appointmentRequests)
+    .set({ confirmationSentAt: new Date() })
+    .where(
+      and(
+        eq(appointmentRequests.id, id),
+        eq(appointmentRequests.status, "confirmed"),
+      ),
     )
     .returning({ id: appointmentRequests.id });
   return rows.length > 0;

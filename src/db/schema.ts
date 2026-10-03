@@ -48,6 +48,8 @@ export const appointmentRequests = pgTable(
     // Filled in by Kevin from the dashboard.
     confirmedDate: date("confirmed_date"),
     confirmedTime: time("confirmed_time"),
+    // When Kevin marked that he texted the customer their confirmation.
+    confirmationSentAt: timestamp("confirmation_sent_at", { withTimezone: true }),
     internalNotes: text("internal_notes"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
