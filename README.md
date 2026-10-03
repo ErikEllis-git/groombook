@@ -1,5 +1,10 @@
 # GroomBook
 
+> **Take-home assessment:** built by Erik Ellis for the **AC Innovations "Client Engagement"
+> assessment** (October 2026). Kevin and his business are the fictional client from the
+> assessment brief; the brief allowed any AI tools, and [how I used them](#how-i-used-ai) is
+> described below.
+
 A booking-request MVP for **Kevin's Mobile Dog Grooming**.
 
 **Live demo:** https://groombook-eta.vercel.app
@@ -151,10 +156,40 @@ the topic in `NTFY_TOPIC`. Use a long random name, since anyone who knows a topi
 
 ## How I used AI
 
-The assessment allows AI. I built this with Claude Code as a pair programmer, then had a second
-model (OpenAI Codex) review the code and the submission independently. I checked every finding
-against the code before acting on it: the real ones are fixed, with regression tests where it
-mattered (stale tabs, cancelled bookings, past times).
+The brief allowed any AI models, so I treated AI as a team I directed and checked rather than a
+shortcut. Every decision, finding and line of code went through me before it shipped.
+
+**1. Building: AI pair programming (Claude Code).** I used Claude Code to research the stack
+(free tiers, Supabase's 7-day inactivity pause vs. Neon), scaffold the app, write tests, set up
+CI, and deploy to Vercel and Neon. I made the final calls on architecture and product:
+request-then-confirm, save-before-notify, one owner account, and free push alerts instead of
+paid SMS.
+
+**2. Independent review: a second model (OpenAI Codex).** To avoid one model grading its own
+work, I had Codex review the project from scratch in a read-only sandbox, three times:
+
+- *Code review:* 14 findings. I verified each against the code, and 13 were real. The fixes
+  include guarding every status change against stale tabs, clearing a cancelled booking's old
+  slot, blocking past-time confirmations, idempotent submissions, per-visitor rate limiting,
+  removing contact details from push alerts, and stricter phone validation, with end-to-end
+  regression tests for the serious ones.
+- *Strategy and research review:* researched AC Innovations, real mobile-groomer operations,
+  and off-the-shelf tools (Square Appointments, MoeGo). That review shaped the client
+  assumptions, discovery questions, pilot plan and build-vs-buy section above, and led to the
+  "confirmation text sent" tracking.
+- *Video review:* a critique of the walkthrough's pacing and clarity, which cut it from 2:08 to 1:32.
+
+**3. The walkthrough video: produced by code.** The video isn't a screen recording I edited by
+hand. A Playwright script drives the real app inside a 1080p stage (phone and browser frames,
+cursor, captions), a local open-source voice model (Kokoro) narrates, and ffmpeg edits the
+cut. Scripting the demo also tested the product: it surfaced two real UX bugs, both fixed and
+covered by tests. A corrected field still showed "required" until resubmitting, and a failed
+submit silently cleared the customer's "Time of day" choice.
+
+**What I verified myself:** every review finding was checked against the code before I acted on
+it, the research claims used in the docs were checked against their sources, and nothing
+merged without lint, typecheck, 17 unit tests and the end-to-end suite passing in CI and against
+the live site.
 
 ## Decisions and trade-offs
 
