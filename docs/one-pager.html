@@ -14,7 +14,7 @@
   .eyebrow { color: #0f766e; font-weight: 700; font-size: 8.5pt; letter-spacing: .08em; text-transform: uppercase; }
   h1 { font-size: 17pt; margin: 2px 0 2px; line-height: 1.15; }
   .sub { color: #57534e; margin: 0 0 10px; }
-  .links { display: flex; gap: 18px; font-size: 9.5pt; margin-bottom: 12px; padding: 7px 10px; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 9.5pt; margin-bottom: 12px; padding: 7px 10px; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; }
   .links b { color: #115e59; }
   a { color: #0f766e; text-decoration: none; }
   h2 { font-size: 11.5pt; margin: 12px 0 4px; color: #115e59; }
@@ -39,48 +39,50 @@
 </style>
 </head>
 <body>
-  <div class="eyebrow">AC Innovations · Take-home assessment</div>
-  <h1>GroomBook: booking requests for Kevin's Mobile Dog Grooming</h1>
-  <p class="sub">Prepared by Erik Ellis · {{DATE}}</p>
+  <div class="eyebrow">AC Innovations · Client Engagement assessment</div>
+  <h1>GroomBook: one place for Kevin's booking requests</h1>
+  <p class="sub">A focused MVP for taking requests, getting alerts and arranging appointments · Erik Ellis · {{DATE}}</p>
 
   <div class="links">
     <span><b>Live app:</b> <a href="{{LIVE_URL}}">{{LIVE_URL_TEXT}}</a></span>
+    <span><b>Dashboard:</b> <a href="{{LIVE_URL}}/dashboard">/dashboard</a> · password <b>kevin-demo</b></span>
     <span><b>Code:</b> <a href="https://github.com/ErikEllis-git/groombook">github.com/ErikEllis-git/groombook</a></span>
   </div>
 
-  <h2>The problem</h2>
+  <h2>The problem and my first-release decision</h2>
   <blockquote>"Clients text me to book, and I lose track of it all… I just want it to stop being chaotic."</blockquote>
-  <p>Bookings arrive as free-form texts mixed in with everything else on his phone. Details are missing (which dog? where?
-    what service?), nothing records whether a request was answered, and the only "system" is memory. He needs every request
-    in one place, complete, and impossible to miss.</p>
+  <p>Kevin needs one reliable place to see what has come in and decide what happens next. I scoped the first release to
+    exactly his three asks. Customers <i>request</i> a day and time window; Kevin reviews the address and dog before
+    setting a time, because a mobile groomer's day depends on drive time, coat condition and temperament.</p>
+  <p class="muted"><b>Working assumptions</b> (to confirm with Kevin): he's the only user, works from his phone, and wants
+    to keep texting customers himself. His service area, hours and pricing are still open questions.</p>
 
-  <h2>What I built: one thing for each of Kevin's asks</h2>
   <div class="grid">
     <div class="card"><div class="ask">"People can request an appointment"</div><h3>A booking page</h3>
-      <p>A one-minute, phone-friendly form that collects what a mobile groomer needs: dog, size, service, address, preferred day and time, and notes like gate codes.</p></div>
+      <p>A short, phone-friendly form for contact details, address, dog, size, service and preferences. Customers are told it's a request, not a reserved slot.</p></div>
     <div class="card"><div class="ask">"See all the requests in one place"</div><h3>One dashboard</h3>
-      <p>Every request sorted into <b>New → Upcoming → Completed</b>. Kevin confirms a time, declines, or marks a job done. Upcoming jobs are grouped by day.</p></div>
-    <div class="card"><div class="ask">"Get notified when a new one comes in"</div><h3>Instant phone alerts</h3>
-      <p>His phone buzzes seconds after a request arrives, showing the dog, service and day. One tap opens the dashboard, where the contact details stay private.</p></div>
+      <p>New requests oldest first. Kevin confirms a time, declines or completes a job, with Call, Text and Maps one tap away. Upcoming jobs are grouped by day.</p></div>
+    <div class="card"><div class="ask">"Get notified when a new one comes in"</div><h3>Phone alerts</h3>
+      <p>A push alert summarizes each request and opens the dashboard. Contact details stay out of the alert, and requests stay saved even if an alert fails.</p></div>
   </div>
 
   <div class="two">
     <div>
-      <h2>How Kevin's day changes</h2>
+      <h2>How Kevin uses it</h2>
       <ol class="flow">
-        <li>A customer taps Kevin's booking link and sends a request.</li>
-        <li>Kevin's phone buzzes with a summary, so there's no digging through texts.</li>
-        <li>He opens the dashboard, picks a time and taps <b>Confirm</b>.</li>
-        <li><b>Text confirmation</b> opens his messaging app with the reply prewritten.</li>
+        <li>Share the booking link; reply to booking texts with it.</li>
+        <li>A new request buzzes his phone. He checks travel, timing and price.</li>
+        <li>Set a time and tap <b>Confirm</b>.</li>
+        <li><b>Text confirmation</b> opens his messages with the reply written; he sends it and ticks <b>Mark text sent</b>.</li>
         <li>After the groom: <b>Mark completed</b>.</li>
       </ol>
 
-      <h2>Why this solves it</h2>
+      <h2>Before rollout: validate with Kevin</h2>
       <ul>
-        <li><b>Nothing gets lost:</b> every request has a status, so nothing sits forgotten in a text thread.</li>
-        <li><b>Complete info every time:</b> no back-and-forth texting for details.</li>
-        <li><b>No new habits:</b> it runs on his phone, and he still texts customers himself.</li>
-        <li><b>$0/month to run as an MVP</b>, with no app for customers to install.</li>
+        <li>Where does the chaos happen: missed requests, slow replies or double-booking?</li>
+        <li>His service area, travel buffers, current calendar and payment tools, and budget.</li>
+        <li><b>Two-week pilot:</b> send booking texts to the link, then compare unanswered requests and admin time.
+          Old texts aren't imported, so we'd reconcile existing bookings once.</li>
       </ul>
     </div>
     <div>
@@ -91,12 +93,13 @@
     </div>
   </div>
 
-  <h2>Under the hood &amp; next steps</h2>
-  <p class="muted">Next.js 16 + TypeScript, Postgres (Neon) with Drizzle ORM, Zod validation, password-protected dashboard, spam and duplicate protection,
-    ntfy push alerts, deployed on Vercel. Unit and end-to-end tests run in CI.
-    <b>Next:</b> automatic reminder texts (Twilio), customer and pet history for repeat clients, and a calendar with days off
-    blocked out. For production, hosting moves to a commercial plan (~$20/mo).</p>
+  <h2>Build vs. buy, and next steps</h2>
+  <p class="muted">Off-the-shelf tools already cover parts of this: Square Appointments (free plan) can require Kevin to
+    accept each request, and MoeGo ($49/mo) adds reminders and mobile scheduling. Before a real rollout I'd compare them
+    with Kevin against his workflow and budget; GroomBook shows the focused flow and is ready to pilot. Likely next steps,
+    if the pilot supports them: pet history and easy rebooking, then reminders. The demo runs on free tiers; real
+    commercial use needs a paid hosting plan (~$20/mo) and a support plan.</p>
 
-  <footer><span>GroomBook MVP</span><span>Erik Ellis · erik.brooks113@gmail.com</span></footer>
+  <footer><span>GroomBook MVP · Built with Next.js, Postgres and ntfy; tested in CI</span><span>Erik Ellis · erik.brooks113@gmail.com</span></footer>
 </body>
 </html>
