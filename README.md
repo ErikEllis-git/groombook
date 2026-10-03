@@ -5,6 +5,7 @@ A booking-request MVP for **Kevin's Mobile Dog Grooming**.
 **Live demo:** https://groombook-eta.vercel.app
 · Owner dashboard: [/dashboard](https://groombook-eta.vercel.app/dashboard) (password: `kevin-demo`)
 · One-page overview: [docs/GroomBook-MVP-Overview.pdf](docs/GroomBook-MVP-Overview.pdf)
+· Walkthrough video (1:32): [docs/GroomBook-walkthrough.mp4](docs/GroomBook-walkthrough.mp4)
 
 > The live site is a public demo with sample data. The demo password is shared on purpose so
 > reviewers can try the dashboard, and a banner asks visitors to use made-up details.
