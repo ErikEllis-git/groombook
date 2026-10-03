@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { business } from "@/config";
-import { countRequestsByStatus, listRequestsByStatus } from "@/db/queries";
+import { DemoBanner } from "@/components/demo-banner";
+import {
+  LIST_LIMIT,
+  countRequestsByStatus,
+  listRequestsByStatus,
+} from "@/db/queries";
 import type { AppointmentRequest } from "@/db/schema";
 import { requireOwner } from "@/lib/auth";
-import { STATUSES, statusValues, type Status } from "@/lib/booking";
+import {
+  STATUSES,
+  statusValues,
+  todayInTimeZone,
+  type Status,
+} from "@/lib/booking";
 import { formatDate } from "@/lib/format";
 import { logout } from "../login/actions";
 import { AutoRefresh } from "./auto-refresh";
@@ -40,10 +50,14 @@ export default async function DashboardPage({
     countRequestsByStatus(),
     listRequestsByStatus(status),
   ]);
+  const today = todayInTimeZone(business.timeZone);
 
   return (
     <main className="flex-1">
       <AutoRefresh />
+      <DemoBanner>
+        Public demo: anyone with the demo password can see and change this data.
+      </DemoBanner>
       <header className="bg-teal-800 text-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4">
           <div>
@@ -94,16 +108,24 @@ export default async function DashboardPage({
         </nav>
 
         <section aria-label={STATUSES[status]} className="mt-6">
+          {counts[status] > requests.length && (
+            <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+              Showing the first {LIST_LIMIT} of {counts[status]}.{" "}
+              {status === "new"
+                ? "Work through these and the rest will appear."
+                : "Older history is kept but not listed here."}
+            </p>
+          )}
           {requests.length === 0 ? (
             <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-stone-600">
               {EMPTY_TEXT[status]}
             </p>
           ) : status === "confirmed" ? (
-            <ScheduleByDay requests={requests} />
+            <ScheduleByDay requests={requests} today={today} />
           ) : (
             <div className="space-y-4">
               {requests.map((r) => (
-                <RequestCard key={r.id} req={r} />
+                <RequestCard key={r.id} req={r} today={today} />
               ))}
             </div>
           )}
@@ -114,7 +136,13 @@ export default async function DashboardPage({
 }
 
 /** Upcoming jobs grouped under a heading per day, in date order. */
-function ScheduleByDay({ requests }: { requests: AppointmentRequest[] }) {
+function ScheduleByDay({
+  requests,
+  today,
+}: {
+  requests: AppointmentRequest[];
+  today: string;
+}) {
   const days = new Map<string, AppointmentRequest[]>();
   for (const r of requests) {
     const day = r.confirmedDate ?? r.preferredDate;
@@ -131,7 +159,7 @@ function ScheduleByDay({ requests }: { requests: AppointmentRequest[] }) {
           </h2>
           <div className="space-y-4">
             {dayRequests.map((r) => (
-              <RequestCard key={r.id} req={r} />
+              <RequestCard key={r.id} req={r} today={today} />
             ))}
           </div>
         </div>

@@ -15,14 +15,20 @@ const request = {
 } as const;
 
 describe("buildNewRequestAlert", () => {
-  it("summarizes everything Kevin needs at a glance", () => {
+  it("summarizes the job at a glance", () => {
     const alert = buildNewRequestAlert(request, "https://example.com/dashboard");
     expect(alert.title).toBe("New booking request: Biscuit");
     expect(alert.body).toContain("Full groom for Biscuit (Goldendoodle)");
     expect(alert.body).toContain("Wed, Oct 7, morning");
-    expect(alert.body).toContain("Dana Smith · (434) 555-0142");
-    expect(alert.body).toContain("Note: Nervous around clippers");
+    expect(alert.body).toContain("From Dana.");
     expect(alert.clickUrl).toBe("https://example.com/dashboard");
+  });
+
+  it("keeps contact details and notes out of the alert", () => {
+    const { body, title } = buildNewRequestAlert(request, "https://x");
+    for (const secret of ["434", "555", "Elm St", "Smith", "clippers"]) {
+      expect(`${title} ${body}`).not.toContain(secret);
+    }
   });
 });
 

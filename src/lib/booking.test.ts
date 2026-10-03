@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bookingRequestSchema,
   formatPhone,
-  normalizePhone,
+  parseUsPhone,
   todayInTimeZone,
 } from "./booking";
 
@@ -69,8 +69,15 @@ describe("bookingRequestSchema", () => {
 });
 
 describe("phone helpers", () => {
-  it("strips formatting and a leading US country code", () => {
-    expect(normalizePhone("+1 (434) 555-0142")).toBe("4345550142");
+  it("accepts common US formats, with or without a country code", () => {
+    for (const raw of ["(434) 555-0142", "434.555.0142", "+1 434 555 0142", "14345550142"]) {
+      expect(parseUsPhone(raw)).toBe("4345550142");
+    }
+  });
+  it("rejects extensions, letters, impossible numbers and wrong lengths", () => {
+    for (const raw of ["434-555-0142 x12", "434-555-0142 ext 5", "call me", "0000000000", "134-555-0142", "434-155-0142", "555-1234", "+44 20 7946 0958"]) {
+      expect(parseUsPhone(raw)).toBeNull();
+    }
   });
   it("formats 10-digit numbers", () => {
     expect(formatPhone("4345550142")).toBe("(434) 555-0142");

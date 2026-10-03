@@ -1,11 +1,12 @@
-import { SERVICES, TIME_WINDOWS, dogSizeText, formatPhone } from "./booking";
+import { SERVICES, TIME_WINDOWS, dogSizeText } from "./booking";
 import type { AppointmentRequest } from "@/db/schema";
 
 // New-request alerts for Kevin.
 //  - ntfy.sh: free phone push notifications, no account required.
 //  - Resend: optional email copy, enabled only when RESEND_API_KEY is set.
-// Failures are logged and never surface to the customer: the request is
-// already safely stored and visible on the dashboard either way.
+// Delivery is best effort: failures are logged and never surface to the
+// customer. The request is already stored and visible on the dashboard, and
+// the dashboard refreshes itself, so a missed alert delays Kevin but loses nothing.
 
 export type Alert = {
   title: string;
@@ -23,30 +24,31 @@ export function formatDate(isoDate: string): string {
   });
 }
 
+/**
+ * Builds the alert text. Deliberately minimal: push topics and inboxes are less
+ * protected than the dashboard, so the alert carries no phone number, address
+ * or notes (which can include gate codes). Kevin taps through for the details.
+ */
 export function buildNewRequestAlert(
   req: Pick<
     AppointmentRequest,
     | "customerName"
-    | "phone"
-    | "address"
     | "dogName"
     | "breed"
     | "dogSize"
     | "service"
     | "preferredDate"
     | "timeWindow"
-    | "customerNotes"
   >,
   dashboardUrl: string,
 ): Alert {
   const dog = req.breed ? `${req.dogName} (${req.breed})` : req.dogName;
+  const firstName = req.customerName.split(" ")[0];
   const lines = [
     `${SERVICES[req.service].label} for ${dog}, ${dogSizeText(req.dogSize).toLowerCase()}`,
     `${formatDate(req.preferredDate)}, ${TIME_WINDOWS[req.timeWindow].toLowerCase()}`,
-    `${req.customerName} · ${formatPhone(req.phone)}`,
-    req.address,
+    `From ${firstName}. Open the dashboard for contact details.`,
   ];
-  if (req.customerNotes) lines.push(`Note: ${req.customerNotes}`);
 
   return {
     title: `New booking request: ${req.dogName}`,

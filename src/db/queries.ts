@@ -1,13 +1,19 @@
 import "server-only";
 
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte } from "drizzle-orm";
 import type { BookingRequestInput, Status } from "@/lib/booking";
 import { db } from "./index";
 import { appointmentRequests, type AppointmentRequest } from "./schema";
 
+/**
+ * Saves a booking request. Idempotent on `submissionId`: if the same form
+ * submission arrives twice (e.g. a retry after a dropped mobile connection),
+ * the original row is returned with `created: false` and nothing is inserted.
+ */
 export async function createAppointmentRequest(
   input: BookingRequestInput,
-): Promise<AppointmentRequest> {
+  meta: { submissionId: string; clientIpHash: string | null },
+): Promise<{ request: AppointmentRequest; created: boolean }> {
   const [row] = await db
     .insert(appointmentRequests)
     .values({
@@ -22,10 +28,39 @@ export async function createAppointmentRequest(
       preferredDate: input.preferredDate,
       timeWindow: input.timeWindow,
       customerNotes: input.notes ?? null,
+      submissionId: meta.submissionId,
+      clientIpHash: meta.clientIpHash,
     })
+    .onConflictDoNothing({ target: appointmentRequests.submissionId })
     .returning();
-  return row;
+  if (row) return { request: row, created: true };
+
+  const [existing] = await db
+    .select()
+    .from(appointmentRequests)
+    .where(eq(appointmentRequests.submissionId, meta.submissionId));
+  return { request: existing, created: false };
 }
+
+/** How many requests this visitor has sent since `since` (for rate limiting). */
+export async function countRecentRequestsFrom(
+  clientIpHash: string,
+  since: Date,
+): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(appointmentRequests)
+    .where(
+      and(
+        eq(appointmentRequests.clientIpHash, clientIpHash),
+        gte(appointmentRequests.createdAt, since),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+/** Max requests shown per dashboard tab; the page says when there are more. */
+export const LIST_LIMIT = 200;
 
 export async function listRequestsByStatus(
   status: Status,
@@ -46,7 +81,7 @@ export async function listRequestsByStatus(
     .from(t)
     .where(eq(t.status, status))
     .orderBy(...orderBy)
-    .limit(200);
+    .limit(LIST_LIMIT);
 }
 
 export async function countRequestsByStatus(): Promise<Record<Status, number>> {
@@ -65,17 +100,24 @@ export async function countRequestsByStatus(): Promise<Record<Status, number>> {
   return counts;
 }
 
+/**
+ * Confirms a request for an exact date and time. Only applies while the request
+ * is still New, so a stale dashboard tab can't pull a declined or completed job
+ * back into Upcoming. Returns false if the request had already changed.
+ */
 export async function confirmRequest(
   id: string,
   confirmedDate: string,
   confirmedTime: string,
-): Promise<AppointmentRequest | undefined> {
-  const [row] = await db
+): Promise<boolean> {
+  const rows = await db
     .update(appointmentRequests)
     .set({ status: "confirmed", confirmedDate, confirmedTime })
-    .where(eq(appointmentRequests.id, id))
-    .returning();
-  return row;
+    .where(
+      and(eq(appointmentRequests.id, id), eq(appointmentRequests.status, "new")),
+    )
+    .returning({ id: appointmentRequests.id });
+  return rows.length > 0;
 }
 
 /**
@@ -89,7 +131,12 @@ export async function transitionRequest(
 ): Promise<boolean> {
   const rows = await db
     .update(appointmentRequests)
-    .set({ status: to })
+    // Back to New means the old appointment slot no longer applies.
+    .set(
+      to === "new"
+        ? { status: to, confirmedDate: null, confirmedTime: null }
+        : { status: to },
+    )
     .where(
       and(eq(appointmentRequests.id, id), eq(appointmentRequests.status, from)),
     )

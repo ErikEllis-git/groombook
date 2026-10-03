@@ -11,6 +11,23 @@ function futureDate(daysAhead: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Submits a complete booking request and returns the (unique) dog name. */
+async function submitRequest(page: Page, prefix = "Biscuit"): Promise<string> {
+  const dogName = `${prefix}-${Date.now().toString(36)}`;
+  await page.goto("/");
+  await page.getByLabel("Dog's name").fill(dogName);
+  await page.getByLabel("Medium (20–50 lb)").check();
+  await page.getByLabel(/Full groom/).check();
+  await page.getByLabel("Preferred date").fill(futureDate(3));
+  await page.getByLabel("Time of day").selectOption("morning");
+  await page.getByLabel("Your name").fill("Dana Smith");
+  await page.getByLabel("Mobile number").fill("(434) 555-0142");
+  await page.getByLabel("Address for the appointment").fill("12 Elm St, Lynchburg");
+  await page.getByRole("button", { name: "Request appointment" }).click();
+  await expect(page.getByRole("heading", { name: "Request received!" })).toBeVisible();
+  return dogName;
+}
+
 async function signIn(page: Page) {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login$/);
@@ -89,4 +106,67 @@ test("request → confirm → complete", async ({ page }) => {
   await expect(upcoming).toBeHidden();
   await page.getByRole("link", { name: /Completed/ }).click();
   await expect(page.locator("article", { hasText: dogName })).toBeVisible();
+});
+
+test("a stale tab can't confirm a request that was already declined", async ({ browser }) => {
+  const context = await browser.newContext();
+  const tabA = await context.newPage();
+  const dogName = await submitRequest(tabA, "Stale");
+  await signIn(tabA);
+  const tabB = await context.newPage();
+  await tabB.goto("/dashboard");
+
+  // Decline in tab B, then try to confirm from tab A's out-of-date view.
+  await tabB
+    .locator("article", { hasText: dogName })
+    .getByRole("button", { name: "Decline" })
+    .click();
+  await expect(tabB.locator("article", { hasText: dogName })).toBeHidden();
+
+  const staleCard = tabA.locator("article", { hasText: dogName });
+  await staleCard.getByLabel("Time").fill("10:30");
+  await staleCard.getByRole("button", { name: "Confirm booking" }).click();
+  await expect(tabA.getByText("already updated elsewhere")).toBeVisible();
+  await tabA.getByRole("link", { name: /Upcoming/ }).click();
+  await expect(tabA.locator("article", { hasText: dogName })).toHaveCount(0);
+  await context.close();
+});
+
+test("cancelled then restored bookings lose their old slot", async ({ page }) => {
+  const dogName = await submitRequest(page, "Cancel");
+  await signIn(page);
+  const card = page.locator("article", { hasText: dogName });
+  await card.getByLabel("Time").fill("11:00");
+  await card.getByRole("button", { name: "Confirm booking" }).click();
+
+  await page.getByRole("link", { name: /Upcoming/ }).click();
+  await page
+    .locator("article", { hasText: dogName })
+    .getByRole("button", { name: "Cancel booking" })
+    .click();
+
+  await page.getByRole("link", { name: /Declined/ }).click();
+  const declined = page.locator("article", { hasText: dogName });
+  await expect(declined).not.toContainText("Booked for");
+  await expect(declined.getByRole("link", { name: "Text confirmation" })).toHaveCount(0);
+  await declined.getByRole("button", { name: "Move back to New" }).click();
+
+  await page.getByRole("link", { name: /New requests/ }).click();
+  const restored = page.locator("article", { hasText: dogName });
+  await expect(restored).toContainText("Requested");
+  await expect(restored.getByRole("link", { name: "Text customer" })).toBeVisible();
+});
+
+test("Kevin can't confirm a time that has already passed", async ({ page }) => {
+  const dogName = await submitRequest(page, "Past");
+  await signIn(page);
+  const card = page.locator("article", { hasText: dogName });
+  // Today at midnight has always passed (the date picker already blocks past days).
+  await card.getByLabel("Date").fill(await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }));
+  await card.getByLabel("Time").fill("00:00");
+  await card.getByRole("button", { name: "Confirm booking" }).click();
+  await expect(card.getByText("already passed")).toBeVisible();
 });

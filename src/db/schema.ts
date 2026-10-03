@@ -40,6 +40,11 @@ export const appointmentRequests = pgTable(
     timeWindow: timeWindowEnum("time_window").notNull(),
     customerNotes: text("customer_notes"),
 
+    // Abuse protection. submissionId makes a retried form submit idempotent;
+    // clientIpHash (an HMAC, never the raw IP) powers the per-visitor rate limit.
+    submissionId: uuid("submission_id").unique(),
+    clientIpHash: text("client_ip_hash"),
+
     // Filled in by Kevin from the dashboard.
     confirmedDate: date("confirmed_date"),
     confirmedTime: time("confirmed_time"),
@@ -55,6 +60,7 @@ export const appointmentRequests = pgTable(
   },
   (t) => [
     index("appointment_requests_status_created_idx").on(t.status, t.createdAt),
+    index("appointment_requests_ip_created_idx").on(t.clientIpHash, t.createdAt),
   ],
 );
 

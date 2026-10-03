@@ -24,7 +24,7 @@ export default async function ThanksPage({
         </h1>
         <p className="mt-3 text-stone-700">
           Thanks{dogName ? ` — we can't wait to meet ${dogName}` : ""}.{" "}
-          {business.ownerName} has been notified and will text you shortly to
+          Your request is saved, and {business.ownerName} will text you to
           confirm an exact time.
         </p>
         <Link

@@ -7,6 +7,7 @@ import {
   DOG_SIZES,
   HONEYPOT_FIELD,
   SERVICES,
+  SUBMISSION_ID_FIELD,
   TIME_WINDOWS,
   type BookingField,
 } from "@/lib/booking";
@@ -14,7 +15,13 @@ import {
 const inputClass =
   "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/30 aria-[invalid=true]:border-red-500";
 
-export function BookingForm({ minDate }: { minDate: string }) {
+export function BookingForm({
+  minDate,
+  submissionId,
+}: {
+  minDate: string;
+  submissionId: string;
+}) {
   const [state, formAction, pending] = useActionState<
     BookingFormState,
     FormData
@@ -266,6 +273,8 @@ export function BookingForm({ minDate }: { minDate: string }) {
           />
         </Field>
       </Section>
+
+      <input type="hidden" name={SUBMISSION_ID_FIELD} value={submissionId} />
 
       {/* Honeypot: hidden from people and screen readers, tempting to bots. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">

@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { connection } from "next/server";
+import { DemoBanner } from "@/components/demo-banner";
 import { business } from "@/config";
 import { todayInTimeZone } from "@/lib/booking";
 import { BookingForm } from "./booking-form";
@@ -17,6 +19,9 @@ export default async function Home() {
 
   return (
     <main className="flex-1">
+      <DemoBanner>
+        This is a demo. Please use made-up names, numbers and addresses.
+      </DemoBanner>
       <header className="bg-teal-800 text-white">
         <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
           <p className="text-sm font-medium uppercase tracking-wide text-teal-200">
@@ -46,7 +51,8 @@ export default async function Home() {
         </ol>
 
         <div className="my-8 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200 sm:p-8">
-          <BookingForm minDate={today} />
+          {/* A fresh ID per page view makes resubmitting this form idempotent. */}
+          <BookingForm minDate={today} submissionId={randomUUID()} />
         </div>
       </div>
 

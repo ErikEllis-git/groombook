@@ -71,12 +71,27 @@ export function todayInTimeZone(timeZone: string, now = new Date()): string {
   }).format(now);
 }
 
-/** Keep only digits; US numbers get a leading 1 stripped for consistency. */
-export function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  return digits.length === 11 && digits.startsWith("1")
-    ? digits.slice(1)
-    : digits;
+/** Current wall-clock time (HH:MM, 24h) in the business's time zone. */
+export function nowTimeInTimeZone(timeZone: string, now = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(now);
+}
+
+/**
+ * Parses a US phone number into its 10 digits, or returns null.
+ * Accepts common formatting and an optional +1 / 1 prefix. Rejects letters and
+ * extensions, and numbers whose area code or exchange can't exist (NANP rules:
+ * neither may start with 0 or 1), so Kevin's Call and Text links always work.
+ */
+export function parseUsPhone(raw: string): string | null {
+  if (!/^[\d\s().+-]+$/.test(raw)) return null;
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return /^[2-9]\d{2}[2-9]\d{6}$/.test(digits) ? digits : null;
 }
 
 export function formatPhone(digits: string): string {
@@ -112,9 +127,16 @@ export function bookingRequestSchema(today: string) {
       .string({ error: "Mobile number is required." })
       .trim()
       .min(1, { error: "Mobile number is required." })
-      .transform(normalizePhone)
-      .refine((v) => v.length >= 10 && v.length <= 15, {
-        error: "Enter a valid phone number.",
+      .transform((raw, ctx) => {
+        const phone = parseUsPhone(raw);
+        if (!phone) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Enter a 10-digit US mobile number.",
+          });
+          return z.NEVER;
+        }
+        return phone;
       }),
     email: z
       .union([z.literal(""), z.email({ error: "Enter a valid email." })])
@@ -152,6 +174,9 @@ export const BOOKING_FIELDS = [
 ] as const;
 
 export type BookingField = (typeof BOOKING_FIELDS)[number];
+
+/** Hidden field carrying a per-form ID, so a retried submit can't double-book. */
+export const SUBMISSION_ID_FIELD = "submissionId";
 
 /** Hidden form field that real visitors never fill in; bots usually do. */
 export const HONEYPOT_FIELD = "website";

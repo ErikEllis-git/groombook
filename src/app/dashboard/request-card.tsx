@@ -9,7 +9,8 @@ import {
   mapsLink,
   smsLink,
 } from "@/lib/format";
-import { changeStatusAction, confirmAction, saveNotesAction } from "./actions";
+import { changeStatusAction, saveNotesAction } from "./actions";
+import { ConfirmForm } from "./confirm-form";
 
 const button =
   "rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600";
@@ -17,15 +18,20 @@ const primary = `${button} bg-teal-700 text-white hover:bg-teal-800`;
 const secondary = `${button} bg-white text-stone-800 ring-1 ring-stone-300 hover:bg-stone-50`;
 const danger = `${button} bg-white text-red-700 ring-1 ring-red-200 hover:bg-red-50`;
 
-export function RequestCard({ req }: { req: AppointmentRequest }) {
+/** `today` is the business-local date, used to default and bound the confirm form. */
+export function RequestCard({ req, today }: { req: AppointmentRequest; today: string }) {
   const service = SERVICES[req.service].label;
   const firstName = req.customerName.split(" ")[0];
+  // Only a live booking has a slot to show or text about; a cancelled one may
+  // still carry its old slot, which must not read as "confirmed".
+  const hasBooking = req.status === "confirmed" || req.status === "completed";
   const confirmedText =
-    req.confirmedDate && req.confirmedTime
+    hasBooking && req.confirmedDate && req.confirmedTime
       ? `${formatDate(req.confirmedDate)} at ${formatTime(req.confirmedTime)}`
       : null;
 
-  const textMessage = confirmedText
+  const textMessage =
+    req.status === "confirmed" && confirmedText
     ? `Hi ${firstName}, it's ${business.ownerName} from ${business.name}. You're confirmed: ${service} for ${req.dogName} on ${confirmedText}. See you then!`
     : `Hi ${firstName}, it's ${business.ownerName} from ${business.name} about your grooming request for ${req.dogName}.`;
 
@@ -92,14 +98,14 @@ export function RequestCard({ req }: { req: AppointmentRequest }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         <a href={smsLink(req.phone, textMessage)} className={secondary}>
-          {confirmedText ? "Text confirmation" : "Text customer"}
+          {req.status === "confirmed" ? "Text confirmation" : "Text customer"}
         </a>
         <a href={`tel:${req.phone}`} className={secondary}>
           Call
         </a>
       </div>
 
-      <Actions req={req} />
+      <Actions req={req} today={today} />
 
       <details className="mt-4 border-t border-stone-100 pt-3">
         <summary className="cursor-pointer text-sm font-medium text-stone-700">
@@ -115,7 +121,7 @@ export function RequestCard({ req }: { req: AppointmentRequest }) {
             rows={2}
             maxLength={2000}
             defaultValue={req.internalNotes ?? ""}
-            placeholder="Only you can see these (e.g. quoted $85, bring de-matting comb)"
+            placeholder="Never shown to customers (e.g. quoted $85, bring de-matting comb)"
             className="block w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/30"
           />
           <SubmitButton className={secondary} pendingText="Saving…">
@@ -127,40 +133,19 @@ export function RequestCard({ req }: { req: AppointmentRequest }) {
   );
 }
 
-function Actions({ req }: { req: AppointmentRequest }) {
+function Actions({ req, today }: { req: AppointmentRequest; today: string }) {
   switch (req.status) {
     case "new":
       return (
         <div className="mt-4 border-t border-stone-100 pt-4">
-          <form
-            action={confirmAction.bind(null, req.id)}
-            className="flex flex-wrap items-end gap-2"
-          >
-            <label className="text-sm">
-              <span className="block text-stone-600">Date</span>
-              <input
-                type="date"
-                name="confirmedDate"
-                required
-                defaultValue={req.preferredDate}
-                className="mt-1 rounded-lg border border-stone-300 px-2 py-1.5"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-stone-600">Time</span>
-              <input
-                type="time"
-                name="confirmedTime"
-                required
-                step={900}
-                defaultValue={defaultTimeFor(req.timeWindow)}
-                className="mt-1 rounded-lg border border-stone-300 px-2 py-1.5"
-              />
-            </label>
-            <SubmitButton className={primary} pendingText="Confirming…">
-              Confirm booking
-            </SubmitButton>
-          </form>
+          <ConfirmForm
+            requestId={req.id}
+            // A request reviewed late defaults to today rather than a past date.
+            defaultDate={req.preferredDate < today ? today : req.preferredDate}
+            defaultTime={defaultTimeFor(req.timeWindow)}
+            minDate={today}
+            buttonClassName={primary}
+          />
           <form action={changeStatusAction.bind(null, req.id, "new", "declined")} className="mt-2">
             <SubmitButton className={danger} pendingText="Declining…">
               Decline

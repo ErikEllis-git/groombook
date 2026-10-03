@@ -2,19 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { business } from "@/config";
 import {
   confirmRequest,
   transitionRequest,
   updateInternalNotes,
 } from "@/db/queries";
 import { requireOwner } from "@/lib/auth";
-import type { Status } from "@/lib/booking";
+import {
+  nowTimeInTimeZone,
+  todayInTimeZone,
+  type Status,
+} from "@/lib/booking";
 
 const idSchema = z.uuid();
 
 const confirmSchema = z.object({
-  confirmedDate: z.iso.date(),
-  confirmedTime: z.iso.time({ precision: -1 }), // HH:MM from <input type="time">
+  confirmedDate: z.iso.date({ error: "Pick a date." }),
+  confirmedTime: z.iso.time({ precision: -1, error: "Pick a time." }), // HH:MM
 });
 
 // The only status changes the dashboard offers.
@@ -25,16 +30,41 @@ const ALLOWED_TRANSITIONS: Record<Status, Status[]> = {
   completed: [],
 };
 
-export async function confirmAction(id: string, formData: FormData) {
+export type ConfirmState = { error?: string } | undefined;
+
+export async function confirmAction(
+  id: string,
+  _prev: ConfirmState,
+  formData: FormData,
+): Promise<ConfirmState> {
   await requireOwner();
+  if (!idSchema.safeParse(id).success) return { error: "Unknown request." };
+
   const parsed = confirmSchema.safeParse({
     confirmedDate: formData.get("confirmedDate"),
     confirmedTime: formData.get("confirmedTime"),
   });
-  if (!idSchema.safeParse(id).success || !parsed.success) return;
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the date and time." };
+  }
 
-  await confirmRequest(id, parsed.data.confirmedDate, parsed.data.confirmedTime);
+  const { confirmedDate, confirmedTime } = parsed.data;
+  const today = todayInTimeZone(business.timeZone);
+  if (
+    confirmedDate < today ||
+    (confirmedDate === today && confirmedTime <= nowTimeInTimeZone(business.timeZone))
+  ) {
+    return { error: "That time has already passed. Pick a future time." };
+  }
+
+  if (!(await confirmRequest(id, confirmedDate, confirmedTime))) {
+    // Leave the page as-is so Kevin sees why; auto-refresh will catch it up.
+    return {
+      error: "This request was already updated elsewhere. Refresh to see its current status.",
+    };
+  }
   revalidatePath("/dashboard");
+  return {};
 }
 
 export async function changeStatusAction(

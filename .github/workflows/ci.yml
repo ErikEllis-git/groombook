@@ -22,11 +22,13 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/groombook
       SESSION_SECRET: ci-only-session-secret-at-least-32-characters
       DASHBOARD_PASSWORD: ci-password
+      # The e2e suite submits several requests from one IP.
+      BOOKING_RATE_LIMIT_PER_HOUR: 1000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run lint
