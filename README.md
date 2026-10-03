@@ -2,6 +2,10 @@
 
 A booking-request MVP for **Kevin's Mobile Dog Grooming**.
 
+**Live demo:** https://groombook-eta.vercel.app
+· Owner dashboard: [/dashboard](https://groombook-eta.vercel.app/dashboard) (password: `kevin-demo`)
+· One-page overview: [docs/GroomBook-MVP-Overview.pdf](docs/GroomBook-MVP-Overview.pdf)
+
 Kevin's problem: clients text him to book and requests get lost in his messages.
 GroomBook gives him three things:
 
@@ -61,7 +65,7 @@ src/
   proxy.ts   Optimistic redirect for signed-out visitors
 drizzle/     Generated SQL migrations
 e2e/         Playwright end-to-end tests
-scripts/     seed.ts (demo data)
+scripts/     seed.mts (demo data), render-one-pager.mjs (the PDF overview)
 ```
 
 ## Running locally

@@ -13,7 +13,7 @@
     "db:migrate": "drizzle-kit migrate",
     "vercel-build": "drizzle-kit migrate && next build",
     "test:e2e": "playwright test",
-    "db:seed": "node scripts/seed.ts"
+    "db:seed": "node scripts/seed.mts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
