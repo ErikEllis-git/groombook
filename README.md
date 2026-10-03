@@ -6,6 +6,9 @@ A booking-request MVP for **Kevin's Mobile Dog Grooming**.
 · Owner dashboard: [/dashboard](https://groombook-eta.vercel.app/dashboard) (password: `kevin-demo`)
 · One-page overview: [docs/GroomBook-MVP-Overview.pdf](docs/GroomBook-MVP-Overview.pdf)
 
+> The live site is a public demo with sample data. The demo password is shared on purpose so
+> reviewers can try the dashboard, and a banner asks visitors to use made-up details.
+
 Kevin's problem: clients text him to book and requests get lost in his messages.
 GroomBook gives him three things:
 
@@ -22,20 +25,29 @@ structured request, and the dashboard prefills the confirmation message for him.
 
 **Customer booking page (`/`)**
 - Mobile-first form with clear, field-level validation; input is kept when something needs fixing
-- Validated on the server (Zod); past dates are rejected in the business's time zone
-- Honeypot field filters out bot spam without a CAPTCHA
+- Validated on the server (Zod): US mobile numbers only (so Call/Text links always work), and no
+  past dates, judged in the business's time zone
+- Spam and accident protection without a CAPTCHA: a honeypot field, a per-visitor limit
+  (5 requests/hour, keyed on a salted hash of the IP, never the raw IP), and a per-form
+  submission ID so a retried submit on a flaky connection can't create a duplicate
 
 **Owner dashboard (`/dashboard`)**
 - Password-protected, signed httpOnly session cookie, 30-day login
 - Tabs with live counts: New requests (oldest first), Upcoming (grouped by day), Completed, Declined
 - One-tap **Call**, **Text** (message prefilled) and **Maps** links on every request
 - Confirm with an exact date and time, decline, mark completed, or move a declined request back to New
-- Private notes per request (pricing, behavior, gate codes)
+- Safe with several tabs or devices open: every status change only applies from the status Kevin
+  was looking at, past times can't be confirmed, and a stale action explains what happened
+  instead of silently overwriting
+- Private notes per request (pricing, behavior), never shown to customers
 - Refreshes itself every 30 seconds and when the tab regains focus
 
 **Notifications**
 - Push notification to Kevin's phone within seconds of a request; tapping it opens the dashboard
-- Sent after the response (`after()`), so customers never wait on it, and a failed alert never loses a request
+- Alerts carry only the dog, service, day and the customer's first name. Phone, address and notes
+  stay behind the dashboard login, since anyone who learns an ntfy topic name can read it
+- Sent after the response (`after()`), so customers never wait on it. Delivery is best effort: a
+  failed alert is logged and the request is still saved and on the dashboard
 
 ## Tech stack
 
@@ -70,7 +82,7 @@ scripts/     seed.mts (demo data), render-one-pager.mjs (the PDF overview)
 
 ## Running locally
 
-Requires Node 20.9+ and Docker.
+Requires Node 24 (see `.nvmrc`, same as CI) and Docker.
 
 ```bash
 npm install
@@ -115,6 +127,11 @@ the topic in `NTFY_TOPIC`. Use a long random name, since anyone who knows a topi
   push is free and instant. The email channel is a fallback.
 - **A single shared password** instead of user accounts: Kevin is the only user. The
   session check runs in the page and in every Server Action, not only in `proxy.ts`.
+  Sessions last 30 days and are signed with `SESSION_SECRET`, so before real use (or after
+  the password leaks) rotate **both** `DASHBOARD_PASSWORD` and `SESSION_SECRET`. Changing only
+  the password leaves existing sessions logged in.
+- **Confirmation texts are sent by Kevin, not tracked.** "Text confirmation" opens his own
+  messaging app with the message written; the app can't know whether he pressed send.
 - **Hosting cost:** Vercel's Hobby tier is for non-commercial use. For Kevin's real business
   it would move to Vercel Pro (~$20/mo) or a free commercial-friendly host such as
   Cloudflare. The code doesn't change.
@@ -124,4 +141,5 @@ the topic in `NTFY_TOPIC`. Use a long random name, since anyone who knows a topi
 1. Automatic confirmation texts and reminders (Twilio) once Kevin wants to pay for SMS
 2. Customer and pet history (repeat clients, last cut, notes carried forward)
 3. Calendar view and a block-out schedule, so customers only pick days Kevin works
-4. Rate limiting on the public form (e.g. Upstash) if spam ever gets past the honeypot
+4. A "confirmation sent" checkbox so unanswered customers stand out
+5. Login rate limiting and pagination beyond 200 requests per tab, once this runs for real

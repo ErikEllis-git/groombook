@@ -27,7 +27,8 @@ client view and one for the technical view. Keep each under about 4 minutes.
 - Submit, then show the confirmation page.
 
 **3. The notification (20s)**
-- Show your phone: the alert arrives within seconds with the dog, service, day and address.
+- Show your phone: the alert arrives within seconds with the dog, service and day. Contact
+  details stay out of the alert on purpose, so they're only visible behind the login.
 - "No more digging through texts. Tapping it opens the dashboard."
 
 **4. Kevin's dashboard (90s)**
@@ -59,15 +60,22 @@ client view and one for the technical view. Keep each under about 4 minutes.
   The form, the database enums and the dashboard all use it, so labels can't drift.
 - `src/app/actions.ts`: the booking Server Action. It validates, saves, then sends the alert with
   `after()`, so the customer never waits on it and a failed alert can't lose a request.
-- `src/db/queries.ts`: all SQL in one place. Status changes only happen from an allowed previous
-  status, so a stale tab can't re-decline a completed job.
+- `src/db/queries.ts`: all SQL in one place. Every status change, confirming included, only
+  applies from the status Kevin was looking at, so a stale tab on his laptop can't undo what he
+  did on his phone. (An independent AI review caught that confirming wasn't guarded at first; the
+  fix has e2e regression tests.)
 - `src/lib/auth.ts` + `src/proxy.ts`: a signed httpOnly cookie. The proxy only redirects; the real check
   runs in the page and in every dashboard action.
-- Honeypot spam filtering, a constant-time password compare, time-zone-aware "no past dates".
+- Abuse protection without a CAPTCHA: honeypot, a per-visitor limit keyed on a salted IP hash,
+  and a per-form submission ID so a retried submit can't double-book.
+- Constant-time password compare, US-only phone validation, time-zone-aware "no past dates".
 
 **3. Quality (45s)**
 - `npm test`: unit tests for validation, sessions and notifications.
-- `npm run test:e2e`: Playwright on a phone viewport runs the full request → confirm → complete flow.
+- `npm run test:e2e`: Playwright on a phone viewport runs the full request → confirm → complete flow,
+  plus regression tests for stale tabs, cancel → restore and past-time confirms.
+- I had a second AI (OpenAI Codex) review the whole project against the brief, verified each
+  finding, and fixed the real ones.
 - GitHub Actions CI runs lint, typecheck, unit tests and e2e against a real Postgres on every push.
 
 **4. Trade-offs and next steps (30s)**
