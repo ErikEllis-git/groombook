@@ -43,11 +43,15 @@ test.beforeAll(() => {
 test("shows validation errors and keeps what the customer typed", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Dog's name").fill("Waffles");
+  await page.getByLabel("Medium (20–50 lb)").check();
+  await page.getByLabel("Time of day").selectOption("afternoon");
   await page.getByRole("button", { name: "Request appointment" }).click();
 
   await expect(page.getByText("Your name is required.")).toBeVisible();
   await expect(page.getByText("Choose a service.")).toBeVisible();
   await expect(page.getByLabel("Dog's name")).toHaveValue("Waffles");
+  await expect(page.getByLabel("Medium (20–50 lb)")).toBeChecked();
+  await expect(page.getByLabel("Time of day")).toHaveValue("afternoon");
 
   // Fixing a field clears its error right away; others stay until fixed.
   await page.getByLabel("Your name").fill("Dana Smith");

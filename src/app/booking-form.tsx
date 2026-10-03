@@ -189,6 +189,10 @@ export function BookingForm({
           error={error("timeWindow")}
         >
           <select
+            // React's post-submit form reset restores a <select> to the
+            // default it mounted with, so remount it when the submitted
+            // values change to keep the customer's choice after an error.
+            key={state ? JSON.stringify(state.values) : "initial"}
             id="timeWindow"
             name="timeWindow"
             defaultValue={value("timeWindow")}
