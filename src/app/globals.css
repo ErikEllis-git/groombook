@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The app uses a single light theme; keep native form controls light too. */
+:root {
+  color-scheme: light;
+}

@@ -1,0 +1,65 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import {
+  confirmRequest,
+  transitionRequest,
+  updateInternalNotes,
+} from "@/db/queries";
+import { requireOwner } from "@/lib/auth";
+import type { Status } from "@/lib/booking";
+
+const idSchema = z.uuid();
+
+const confirmSchema = z.object({
+  confirmedDate: z.iso.date(),
+  confirmedTime: z.iso.time({ precision: -1 }), // HH:MM from <input type="time">
+});
+
+// The only status changes the dashboard offers.
+const ALLOWED_TRANSITIONS: Record<Status, Status[]> = {
+  new: ["declined"],
+  confirmed: ["completed", "declined"],
+  declined: ["new"],
+  completed: [],
+};
+
+export async function confirmAction(id: string, formData: FormData) {
+  await requireOwner();
+  const parsed = confirmSchema.safeParse({
+    confirmedDate: formData.get("confirmedDate"),
+    confirmedTime: formData.get("confirmedTime"),
+  });
+  if (!idSchema.safeParse(id).success || !parsed.success) return;
+
+  await confirmRequest(id, parsed.data.confirmedDate, parsed.data.confirmedTime);
+  revalidatePath("/dashboard");
+}
+
+export async function changeStatusAction(
+  id: string,
+  from: Status,
+  to: Status,
+) {
+  await requireOwner();
+  if (!idSchema.safeParse(id).success) return;
+  if (!ALLOWED_TRANSITIONS[from]?.includes(to)) return;
+
+  await transitionRequest(id, from, to);
+  revalidatePath("/dashboard");
+}
+
+export async function saveNotesAction(id: string, formData: FormData) {
+  await requireOwner();
+  if (!idSchema.safeParse(id).success) return;
+  const notes = z
+    .string()
+    .trim()
+    .max(2000)
+    .safeParse(formData.get("internalNotes") ?? "");
+  if (!notes.success) return;
+
+  await updateInternalNotes(id, notes.data || null);
+  revalidatePath("/dashboard");
+}
