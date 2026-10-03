@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { submitBookingRequest, type BookingFormState } from "./actions";
 import {
   BOOKING_FIELDS,
@@ -27,8 +27,21 @@ export function BookingForm({
     FormData
   >(submitBookingRequest, undefined);
 
+  // Fields the customer has changed since the last submit. Their errors are
+  // hidden so a corrected field stops looking invalid before they resubmit.
+  const [edited, setEdited] = useState<{ after: BookingFormState; names: Set<string> }>(
+    { after: undefined, names: new Set() },
+  );
+  const editedNow = edited.after === state ? edited.names : new Set<string>();
+  const markEdited = (e: React.FormEvent<HTMLFormElement>) => {
+    const name = (e.target as HTMLInputElement).name;
+    if (!name || editedNow.has(name) || !state?.errors) return;
+    setEdited({ after: state, names: new Set(editedNow).add(name) });
+  };
+
   const value = (f: BookingField) => state?.values[f] ?? "";
-  const error = (f: BookingField) => state?.errors?.[f]?.[0];
+  const error = (f: BookingField) =>
+    editedNow.has(f) ? undefined : state?.errors?.[f]?.[0];
 
   // After a failed submit, take the customer straight to the first problem.
   const formRef = useRef<HTMLFormElement>(null);
@@ -43,7 +56,14 @@ export function BookingForm({
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} noValidate className="space-y-8">
+    <form
+      ref={formRef}
+      action={formAction}
+      onInput={markEdited}
+      onChange={markEdited}
+      noValidate
+      className="space-y-8"
+    >
       {state?.message && (
         <p
           role="alert"

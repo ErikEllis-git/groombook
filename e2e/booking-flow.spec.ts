@@ -48,6 +48,13 @@ test("shows validation errors and keeps what the customer typed", async ({ page 
   await expect(page.getByText("Your name is required.")).toBeVisible();
   await expect(page.getByText("Choose a service.")).toBeVisible();
   await expect(page.getByLabel("Dog's name")).toHaveValue("Waffles");
+
+  // Fixing a field clears its error right away; others stay until fixed.
+  await page.getByLabel("Your name").fill("Dana Smith");
+  await expect(page.getByText("Your name is required.")).toBeHidden();
+  await page.getByLabel(/Full groom/).check();
+  await expect(page.getByText("Choose a service.")).toBeHidden();
+  await expect(page.getByText("Address is required.")).toBeVisible();
 });
 
 test("dashboard requires a password", async ({ page }) => {
